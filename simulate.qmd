@@ -1,0 +1,134 @@
+---
+title: "Simulation: Craps Simulation"
+editor: visual
+markdown: 
+---
+
+## Simulation (Probability)
+
+The three questions:
+
+1.  Which probability do you want to estimate?
+
+I want to estimate the probability (p) of winning a game after setting a point. Then I want to estimate the probability of winning 7 out of 10 games using this probability.
+
+2.  What is the simulation result (in numbers and visuals)?
+
+    See below
+
+3.  What is the simulation variability?
+
+I want to estimate the variablility in p by repeating the simulation 10 times and determining the mean and variance. 
+
+Make sure to set a seed to make your analysis reproducible.
+
+
+```{r}
+source("craps_simulation.R")
+
+#Question 1 - What is the probability of winning a game after setting a point?
+
+set.seed(20)
+# First we simulate multiple games
+result <- run_craps_simulation(N = 1000)
+
+# Then we filter games with a point roll
+games_with_point <- subset(result, point != "N/A")
+
+# Next we determine the total games with a point set
+total_point_games <- nrow(games_with_point)
+print(paste("Total games where a point was set:", total_point_games))
+
+
+# Next we calculate the probability of winning after a point roll to estimate p
+wins_after_point <- sum(games_with_point$outcome == "You Win")
+wins_after_point
+prob_win_after_point <- wins_after_point / total_point_games
+print(paste("Probability of winning after a point roll:", round(prob_win_after_point, 4)))
+p <- prob_win_after_point
+
+#Finally we estimate the probability using the binomial distribution
+binom_prob <- dbinom(7, size = 10, prob = p)
+print(paste("Probability of winning exactly 7 out of 10 games:", round(binom_prob, 4)))
+
+
+```
+
+```{r}
+
+#Question 2 - What is the simulation result and visuals?
+
+# Visualize outcomes for games with point rolls
+library(ggplot2)
+
+# Calculate proportions
+point_outcomes <- table(games_with_point$outcome)
+point_outcomes_df <- as.data.frame(point_outcomes)
+point_outcomes_df$Proportion <- point_outcomes_df$Freq / sum(point_outcomes_df$Freq)
+
+# Plot proportions
+ggplot(point_outcomes_df, aes(x = Var1, y = Proportion)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(
+    title = "Proportions for Games with a Point Set",
+    x = "Outcome",
+    y = "Proportion"
+  ) +
+  theme_minimal()
+
+# Visualizing Binomial distribution for n = 10 games
+wins <- 0:10
+binom_probs <- dbinom(wins, size = 10, prob = p)
+
+binom_data <- data.frame(wins, binom_probs)
+
+ggplot(binom_data, aes(x = wins, y = binom_probs)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(
+    title = "Binomial Distribution of Wins in 10 Games",
+    x = "Number of Wins",
+    y = "Probability"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r}
+#Question 3 - What is the simulation variability?
+
+# Simulate 1000 batches of 10 games each
+set.seed(20)  # For reproducibility
+n_simulations <- 1000
+n_games <- 10
+simulated_probs <- replicate(n_simulations, {
+  games <- run_craps_simulation(N = n_games)
+  mean(games$outcome == "You Win")  # Proportion of wins
+})
+
+# Plot the variability
+simulated_probs_df <- data.frame(simulated_probs)
+
+ggplot(simulated_probs_df, aes(x = simulated_probs)) +
+  geom_histogram(binwidth = 0.01, fill = "skyblue", color = "black") +
+  labs(
+    title = "Simulation Variability of Win Probability",
+    x = "Estimated Probability of Winning",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+
+
+# Mean and standard deviation of the simulated probabilities
+mean_prob <- mean(simulated_probs)
+sd_prob <- sd(simulated_probs)
+
+print(paste("Mean estimated probability:", round(mean_prob, 4)))
+print(paste("Standard deviation of probabilities:", round(sd_prob, 4)))
+
+
+```
+Conclusion: The estimated probability of winning a game after a point set is 0.4117 based on 1000 games. After repeating the simulation 10 times, we get estimate of of the mean probability of 0.496 and a standard deviation of 0.1546. So after a point set, there is a bout a 41% chance of winning a game. If you play 10 games then the probability of winning exactly seven games is 0.049, or only about a 5% chance! 
+
+
